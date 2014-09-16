@@ -96,4 +96,4 @@ let promise = Promise<Int> { (resolve, reject) -> Void in
 Please refer to [`PromiseTests.swift`](https://github.com/chamrc/Promise/blob/master/PromiseTests/PromiseTests.swift) for more info.
 
 ## Credits
-Most of the code is taken from [PromiseKit](https://github.com/chamrc/Promise/blob/master/PromiseTests/PromiseTests.swift)
+Most of the code is taken from [PromiseKit](https://github.com/chamrc/Promise/blob/master/PromiseTests/PromiseTests.swift) with a few modifications
