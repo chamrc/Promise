@@ -14,6 +14,15 @@ let promise = Promise<Int> { (resolve, reject) -> Void in
 }
 ```
 
+### Short hand
+```
+let promise = Promise<Int>()
+.then { value -> Void in
+    // Will run in `dispatch_queue_t` with priority `DISPATCH_QUEUE_PRIORITY_BACKGROUND`
+    // value = nil
+}
+```
+
 ### Return an object
 ```
 let promise = Promise<Int> { (resolve, reject) -> Void in
@@ -26,10 +35,26 @@ let promise = Promise<Int> { (resolve, reject) -> Void in
 }.thenOnMain { value -> Void in
     // Will run in main thread
     // value = "Promise"
+}.then { value -> Void in
+    // Will run in `dispatch_queue_t` with priority `DISPATCH_QUEUE_PRIORITY_BACKGROUND`
+    // value = nil
 }
 ```
 
 ### Return an instance of NSError
+```
+let promise = Promise<Int> { (resolve, reject) -> Void in
+    // Will run in Main Thread
+    resolve(25)
+}.then { value -> Promise<String> in
+    // Will run in `dispatch_queue_t` with priority `DISPATCH_QUEUE_PRIORITY_BACKGROUND`
+    // value = 25
+    let error = NSError(...) // 
+    return error
+}.catch { error -> Void in
+    // Will run in `dispatch_queue_t` with priority `DISPATCH_QUEUE_PRIORITY_BACKGROUND`
+}
+```
 
 ### Return another promise in `then`
 ```
