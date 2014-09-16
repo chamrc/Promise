@@ -3,7 +3,7 @@ import UIKit
 
 enum PromiseState<T> {
     case Pending
-    case Fulfilled(@autoclosure () -> T)
+    case Fulfilled(@autoclosure () -> T?)
     case Rejected(NSError)
 }
 
@@ -16,7 +16,7 @@ private class PromiseGCD {
     }
 }
 
-private func bind1<T, U>(body:(T) -> Promise<U>, value:T, fulfiller: (U)->(), rejecter: (NSError)->()) {
+private func bind1<T, U>(body:(T?) -> Promise<U>, value:T?, fulfiller: (U?)->(), rejecter: (NSError)->()) {
     let promise = body(value)
     switch promise.state {
     case .Rejected(let error):
@@ -37,7 +37,7 @@ private func bind1<T, U>(body:(T) -> Promise<U>, value:T, fulfiller: (U)->(), re
     }
 }
 
-private func bind2<T>(body:(NSError) -> Promise<T>, error: NSError, fulfiller: (T)->(), rejecter: (NSError)->()) {
+private func bind2<T>(body:(NSError) -> Promise<T>, error: NSError, fulfiller: (T?)->(), rejecter: (NSError)->()) {
     let promise = body(error)
     switch promise.state {
     case .Rejected(let error):
@@ -58,10 +58,7 @@ private func bind2<T>(body:(NSError) -> Promise<T>, error: NSError, fulfiller: (
     }
 }
 
-
-
-
-func dispatch_promise<T>(to queue:dispatch_queue_t = dispatch_get_global_queue(0, 0), block:(fulfiller: (T)->Void, rejecter: (NSError)->Void) -> ()) -> Promise<T> {
+func dispatch_promise<T>(to queue:dispatch_queue_t = dispatch_get_global_queue(0, 0), block:(fulfiller: (T?)->Void, rejecter: (NSError)->Void) -> ()) -> Promise<T> {
     return Promise<T> { (fulfiller, rejecter) in
         dispatch_async(queue) {
             block(fulfiller, rejecter)
@@ -107,18 +104,20 @@ public class Promise<T> {
     }
     
     private func callHandlers() {
-        for handler in handlers { handler() }
+        for handler in handlers {
+            handler()
+        }
         handlers.removeAll(keepCapacity: false)
     }
     
-    public init(_ body:(resolve:(T) -> Void, reject:(NSError) -> Void) -> Void) {
+    public init(_ body:(resolve:(T?) -> Void, reject:(NSError) -> Void) -> Void) {
         func reject(err: NSError) {
             if pending {
                 state = .Rejected(err)
                 callHandlers()
             }
         }
-        func resolve(obj: T) {
+        func resolve(obj: T?) {
             if pending {
                 state = .Fulfilled(obj)
                 callHandlers()
@@ -134,7 +133,7 @@ public class Promise<T> {
         return (p, f!, r!)
     }
     
-    public init(value:T) {
+    public init(value:T?) {
         self.state = .Fulfilled(value)
     }
     
@@ -144,17 +143,24 @@ public class Promise<T> {
     
     // MARK: Public Methods
     
-    public func then<U>(body:(T) -> U) -> Promise<U> {
+    public func then<U>(body:(T?) -> Void) -> Promise<U> {
         return self.then(onQueue: PromiseGCD.backgroundQueue(), body: body)
     }
-    public func thenOnMain<U>(body:(T) -> U) -> Promise<U> {
+    public func thenOnMain<U>(body:(T?) -> Void) -> Promise<U> {
         return self.then(onQueue: PromiseGCD.mainQueue(), body: body)
     }
     
-    public func then<U>(body:(T) -> Promise<U>) -> Promise<U> {
+    public func then<U>(body:(T?) -> U) -> Promise<U> {
         return self.then(onQueue: PromiseGCD.backgroundQueue(), body: body)
     }
-    public func thenOnMain<U>(body:(T) -> Promise<U>) -> Promise<U> {
+    public func thenOnMain<U>(body:(T?) -> U) -> Promise<U> {
+        return self.then(onQueue: PromiseGCD.mainQueue(), body: body)
+    }
+    
+    public func then<U>(body:(T?) -> Promise<U>) -> Promise<U> {
+        return self.then(onQueue: PromiseGCD.backgroundQueue(), body: body)
+    }
+    public func thenOnMain<U>(body:(T?) -> Promise<U>) -> Promise<U> {
         return self.then(onQueue: PromiseGCD.mainQueue(), body: body)
     }
     
@@ -189,13 +195,41 @@ public class Promise<T> {
     
     // MARK: Private Methods
     
-    private func then<U>(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:(T) -> U) -> Promise<U> {
+    private func then<U>(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:(T?) -> Void) -> Promise<U> {
         switch state {
         case .Rejected(let error):
             return Promise<U>(error: error)
         case .Fulfilled(let value):
             return dispatch_promise(to:q) { (resolve, reject) in
-                let result = body(value())
+                body(value())
+                resolve(nil)
+            }
+        case .Pending:
+            return Promise<U> { (resolve, reject) in
+                self.handlers.append {
+                    switch self.state {
+                    case .Rejected(let error):
+                        reject(error)
+                    case .Fulfilled(let value):
+                        dispatch_async(q) {
+                            body(value())
+                            resolve(nil)
+                        }
+                    case .Pending:
+                        abort()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func then<U>(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:(T?) -> U) -> Promise<U> {
+        switch state {
+        case .Rejected(let error):
+            return Promise<U>(error: error)
+        case .Fulfilled(let value):
+            return dispatch_promise(to:q) { (resolve, reject) in
+                let result = body(value()!)
                 if let error = result as? NSError {
                     reject(error)
                 } else {
@@ -210,7 +244,7 @@ public class Promise<T> {
                         reject(error)
                     case .Fulfilled(let value):
                         dispatch_async(q) {
-                            let result = body(value())
+                            let result = body(value()!)
                             if let error = result as? NSError {
                                 reject(error)
                             } else {
@@ -225,7 +259,7 @@ public class Promise<T> {
         }
     }
     
-    private func then<U>(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:(T) -> Promise<U>) -> Promise<U> {
+    private func then<U>(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:(T?) -> Promise<U>) -> Promise<U> {
         
         switch state {
         case .Rejected(let error):

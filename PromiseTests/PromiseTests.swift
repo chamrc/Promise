@@ -36,7 +36,7 @@ class PromiseTests: XCTestCase {
         }.then { value -> Void in
             NSLog("isMainThread 2: \(NSThread.isMainThread())")
 
-            XCTAssertEqual(value, 25)
+            XCTAssertEqual(value!, 25)
             e1.fulfill()
         }
         
@@ -54,7 +54,7 @@ class PromiseTests: XCTestCase {
         }.then { value -> Promise<String> in
             NSLog("isMainThread 4: \(NSThread.isMainThread())")
 
-            XCTAssertEqual(value, 25)
+            XCTAssertEqual(value!, 25)
             e1.fulfill()
             return Promise<String>({ (resolve, reject) -> Void in
                 resolve("Promise")
@@ -62,7 +62,7 @@ class PromiseTests: XCTestCase {
         }.then { value -> Void in
             NSLog("isMainThread 5: \(NSThread.isMainThread())")
 
-            XCTAssertEqual(value, "Promise")
+            XCTAssertEqual(value!, "Promise")
             e2.fulfill()
         }
         
@@ -80,7 +80,7 @@ class PromiseTests: XCTestCase {
         }.then { value -> Promise<String> in
             NSLog("isMainThread 7: \(NSThread.isMainThread())")
             
-            XCTAssertEqual(value, 25)
+            XCTAssertEqual(value!, 25)
             e1.fulfill()
             return Promise<String>({ (resolve, reject) -> Void in
                 resolve("Promise")
@@ -90,7 +90,7 @@ class PromiseTests: XCTestCase {
             
             return NSError(domain: "Error", code: 123, userInfo: [:])
         }.then { value -> NSError in
-            NSLog("isMainThread 8: \(NSThread.isMainThread())")
+            NSLog("isMainThread 9: \(NSThread.isMainThread())")
             NSLog("value: \(value)")
             return NSError(domain: "Error", code: 123, userInfo: [:])
         }.catch { error -> Void in
@@ -102,6 +102,38 @@ class PromiseTests: XCTestCase {
     }
     
     func testReturnNothing() {
+        let e1 = expectation()
+        let e2 = expectation()
+        let e3 = expectation()
         
+        let promise = Promise<Int> { (resolve, reject) -> Void in
+            NSLog("isMainThread 10: \(NSThread.isMainThread())")
+            
+            resolve(25)
+        }.then { value -> Promise<String> in
+            NSLog("isMainThread 11: \(NSThread.isMainThread())")
+            
+            XCTAssertEqual(value!, 25)
+            e1.fulfill()
+            return Promise<String>({ (resolve, reject) -> Void in
+                resolve("Promise")
+            })
+        }.then { (value) -> Void in
+            NSLog("isMainThread 12: \(NSThread.isMainThread())")
+            XCTAssertEqual(value!, "Promise")
+            e2.fulfill()
+            
+        }.then { (value) -> Void in
+            NSLog("isMainThread 13: \(NSThread.isMainThread())")
+            
+            if "\(value!)" == "()" {
+                e3.fulfill()
+            }
+            
+        }.catch { error -> Void in
+            
+        }
+        
+        waitForExpectationsWithTimeout(1, handler: nil)
     }
 }
