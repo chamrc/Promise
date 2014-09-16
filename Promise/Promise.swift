@@ -110,6 +110,10 @@ public class Promise<T> {
         handlers.removeAll(keepCapacity: false)
     }
     
+    convenience public init() {
+        self.init(value: nil)
+    }
+    
     public init(_ body:(resolve:(T?) -> Void, reject:(NSError) -> Void) -> Void) {
         func reject(err: NSError) {
             if pending {
@@ -119,6 +123,7 @@ public class Promise<T> {
         }
         func resolve(obj: T?) {
             if pending {
+                NSLog("\(obj)")
                 state = .Fulfilled(obj)
                 callHandlers()
             }
@@ -201,7 +206,15 @@ public class Promise<T> {
             return Promise<U>(error: error)
         case .Fulfilled(let value):
             return dispatch_promise(to:q) { (resolve, reject) in
-                body(value())
+                if let val = value() {
+                    if "\(val)" == "()" { // Void
+                        body(nil)
+                    } else {
+                        body(val)
+                    }
+                } else {
+                    body(nil)
+                }
                 resolve(nil)
             }
         case .Pending:
@@ -212,7 +225,15 @@ public class Promise<T> {
                         reject(error)
                     case .Fulfilled(let value):
                         dispatch_async(q) {
-                            body(value())
+                            if let val = value() {
+                                if "\(val)" == "()" { // Void
+                                    body(nil)
+                                } else {
+                                    body(val)
+                                }
+                            } else {
+                                body(nil)
+                            }
                             resolve(nil)
                         }
                     case .Pending:
@@ -229,7 +250,7 @@ public class Promise<T> {
             return Promise<U>(error: error)
         case .Fulfilled(let value):
             return dispatch_promise(to:q) { (resolve, reject) in
-                let result = body(value()!)
+                let result = body(value())
                 if let error = result as? NSError {
                     reject(error)
                 } else {
@@ -244,7 +265,7 @@ public class Promise<T> {
                         reject(error)
                     case .Fulfilled(let value):
                         dispatch_async(q) {
-                            let result = body(value()!)
+                            let result = body(value())
                             if let error = result as? NSError {
                                 reject(error)
                             } else {
@@ -299,6 +320,7 @@ public class Promise<T> {
                 self.handlers.append {
                     switch self.state {
                     case .Fulfilled(let value):
+                        NSLog("\(value())")
                         resolve(value())
                     case .Rejected(let error):
                         dispatch_async(onQueue){

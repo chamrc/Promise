@@ -126,12 +126,37 @@ class PromiseTests: XCTestCase {
         }.then { (value) -> Void in
             NSLog("isMainThread 13: \(NSThread.isMainThread())")
             
-            if "\(value!)" == "()" {
+            if value == nil {
                 e3.fulfill()
             }
             
         }.catch { error -> Void in
             
+        }
+        
+        waitForExpectationsWithTimeout(1, handler: nil)
+    }
+    
+    func testEmptyInit() {
+        let e1 = expectation()
+        let e2 = expectation()
+        let e3 = expectation()
+        
+        Promise<Int>()
+        .then { (value) -> Int in
+            if value == nil {
+                e1.fulfill()
+            }
+            return 24
+        }
+        .then { (value) -> String in
+            XCTAssertEqual(value!, 24)
+            e2.fulfill()
+            return "Hello"
+        }
+        .thenOnMain { (value) -> Void in
+            XCTAssertEqual(value!, "Hello")
+            e3.fulfill()
         }
         
         waitForExpectationsWithTimeout(1, handler: nil)
