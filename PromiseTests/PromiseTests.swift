@@ -161,4 +161,34 @@ class PromiseTests: XCTestCase {
         
         waitForExpectationsWithTimeout(1, handler: nil)
     }
+    
+    func testDefer() {
+        let e1 = expectation()
+        let e2 = expectation()
+        let e3 = expectation()
+        
+        Promise<Int>()
+        .then { (value) -> Int in
+            if value == nil {
+                e1.fulfill()
+            }
+            return 24
+        }
+        .then { (value) -> Promise<String> in
+            XCTAssertEqual(value!, 24)
+            e2.fulfill()
+            
+            let (promise, resolve, reject) = Promise<String>.defer()
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), { () -> Void in
+                resolve("Hello")
+            })
+            return promise
+        }
+        .thenOnMain { (value) -> Void in
+            XCTAssertEqual(value!, "Hello")
+            e3.fulfill()
+        }
+        
+        waitForExpectationsWithTimeout(1, handler: nil)
+    }
 }

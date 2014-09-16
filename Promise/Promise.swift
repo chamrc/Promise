@@ -12,7 +12,7 @@ private class PromiseGCD {
         return dispatch_get_main_queue()
     }
     class func backgroundQueue() -> dispatch_queue_t {
-        return dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND , 0)
+        return dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)
     }
 }
 
@@ -131,8 +131,8 @@ public class Promise<T> {
         body(resolve, reject)
     }
     
-    public class func defer() -> (promise:Promise, resolve:(T) -> Void, reject:(NSError) -> Void) {
-        var f: ((T) -> Void)?
+    public class func defer() -> (promise:Promise, resolve:(T?) -> Void, reject:(NSError) -> Void) {
+        var f: ((T?) -> Void)?
         var r: ((NSError) -> Void)?
         let p = Promise{ f = $0; r = $1 }
         return (p, f!, r!)
