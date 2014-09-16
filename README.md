@@ -91,3 +91,6 @@ let promise = Promise<Int> { (resolve, reject) -> Void in
     // value = "Hello"
 }
 ```
+
+## More Info
+Please refer to [`PromiseTests.swift`](https://github.com/chamrc/Promise/blob/master/PromiseTests/PromiseTests.swift) for more info.
