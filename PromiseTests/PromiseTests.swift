@@ -40,7 +40,7 @@ class PromiseTests: XCTestCase {
             e1.fulfill()
         }
         
-        waitForExpectationsWithTimeout(1, handler: nil)
+        waitForExpectationsWithTimeout(10, handler: nil)
     }
     
     func testPromise() {
@@ -66,7 +66,7 @@ class PromiseTests: XCTestCase {
             e2.fulfill()
         }
         
-        waitForExpectationsWithTimeout(1, handler: nil)
+        waitForExpectationsWithTimeout(10, handler: nil)
     }
     
     func testCatch() {
@@ -98,7 +98,7 @@ class PromiseTests: XCTestCase {
             e2.fulfill()
         }
         
-        waitForExpectationsWithTimeout(1, handler: nil)
+        waitForExpectationsWithTimeout(10, handler: nil)
     }
     
     func testReturnNothing() {
@@ -134,7 +134,7 @@ class PromiseTests: XCTestCase {
             
         }
         
-        waitForExpectationsWithTimeout(1, handler: nil)
+        waitForExpectationsWithTimeout(10, handler: nil)
     }
     
     func testEmptyInit() {
@@ -159,7 +159,7 @@ class PromiseTests: XCTestCase {
             e3.fulfill()
         }
         
-        waitForExpectationsWithTimeout(1, handler: nil)
+        waitForExpectationsWithTimeout(10, handler: nil)
     }
     
     func testDefer() {
@@ -189,6 +189,6 @@ class PromiseTests: XCTestCase {
             e3.fulfill()
         }
         
-        waitForExpectationsWithTimeout(1, handler: nil)
+        waitForExpectationsWithTimeout(10, handler: nil)
     }
 }

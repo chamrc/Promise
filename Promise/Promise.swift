@@ -123,7 +123,7 @@ public class Promise<T> {
         }
         func resolve(obj: T?) {
             if pending {
-                NSLog("\(obj)")
+                NSLog("")
                 state = .Fulfilled(obj)
                 callHandlers()
             }
@@ -207,7 +207,7 @@ public class Promise<T> {
         case .Fulfilled(let value):
             return dispatch_promise(to:q) { (resolve, reject) in
                 if let val = value() {
-                    if "\(val)" == "()" { // Void
+                    if val is Void {
                         body(nil)
                     } else {
                         body(val)
@@ -226,7 +226,7 @@ public class Promise<T> {
                     case .Fulfilled(let value):
                         dispatch_async(q) {
                             if let val = value() {
-                                if "\(val)" == "()" { // Void
+                                if val is Void {
                                     body(nil)
                                 } else {
                                     body(val)
