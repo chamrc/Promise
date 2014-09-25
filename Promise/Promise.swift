@@ -137,12 +137,12 @@ public class Promise<T> {
     
     // MARK: Public Methods
     
-//    public func then<U>(body:(T?) -> Void) -> Promise<U> {
-//        return self.then(onQueue: PromiseGCD.backgroundQueue(), body: body)
-//    }
-//    public func thenOnMain<U>(body:(T?) -> Void) -> Promise<U> {
-//        return self.then(onQueue: PromiseGCD.mainQueue(), body: body)
-//    }
+    public func then<U>(body:(T?) -> Void) -> Promise<U> {
+        return self.then(onQueue: PromiseGCD.backgroundQueue(), body: body)
+    }
+    public func thenOnMain<U>(body:(T?) -> Void) -> Promise<U> {
+        return self.then(onQueue: PromiseGCD.mainQueue(), body: body)
+    }
     
     public func then<U>(body:(T?) -> U) -> Promise<U> {
         return self.then(onQueue: PromiseGCD.backgroundQueue(), body: body)
@@ -182,51 +182,51 @@ public class Promise<T> {
         }
     }
     
-//    private func then<U>(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:(T?) -> Void) -> Promise<U> {
-//        return dispatch_promise(to: q)  { (resolve, reject) in
-//            switch self.state {
-//            case .Rejected(let error):
-//                reject(error)
-//            case .Fulfilled(let value):
-//                if let val = value() {
-//                    if self.isVoid(val) {
-//                        body(nil)
-//                    } else {
-//                        body(val)
-//                    }
-//                } else {
-//                    body(nil)
-//                }
-//                
-//                resolve(nil)
-//            case .Pending:
-//                objc_sync_enter(self)
-//
-//                self.handlers.append {
-//                    switch self.state {
-//                    case .Rejected(let error):
-//                        reject(error)
-//                    case .Fulfilled(let value):
-//                        if let val = value() {
-//                            if self.isVoid(val) {
-//                                body(nil)
-//                            } else {
-//                                body(val)
-//                            }
-//                        } else {
-//                            body(nil)
-//                        }
-//                        
-//                        resolve(nil)
-//                    case .Pending:
-//                        abort()
-//                    }
-//                }
-//                
-//                objc_sync_exit(self)
-//            }
-//        }
-//    }
+    private func then<U>(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:(T?) -> Void) -> Promise<U> {
+        return dispatch_promise(to: q)  { (resolve, reject) in
+            switch self.state {
+            case .Rejected(let error):
+                reject(error)
+            case .Fulfilled(let value):
+                if let val = value() {
+                    if self.isVoid(val) {
+                        body(nil)
+                    } else {
+                        body(val)
+                    }
+                } else {
+                    body(nil)
+                }
+                
+                resolve(nil)
+            case .Pending:
+                objc_sync_enter(self)
+
+                self.handlers.append {
+                    switch self.state {
+                    case .Rejected(let error):
+                        reject(error)
+                    case .Fulfilled(let value):
+                        if let val = value() {
+                            if self.isVoid(val) {
+                                body(nil)
+                            } else {
+                                body(val)
+                            }
+                        } else {
+                            body(nil)
+                        }
+                        
+                        resolve(nil)
+                    case .Pending:
+                        abort()
+                    }
+                }
+                
+                objc_sync_exit(self)
+            }
+        }
+    }
     
     private func then<U>(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:(T?) -> U) -> Promise<U> {
         return dispatch_promise(to: q)  { (resolve, reject) in
@@ -286,14 +286,24 @@ public class Promise<T> {
                 case .Rejected(let error):
                     reject(error)
                 case .Fulfilled(let bodyValue):
-                    resolve(bodyValue())
+                    let val = bodyValue()
+                    if val is Void {
+                        resolve(nil)
+                    } else {
+                        resolve(val)
+                    }
                 case .Pending:
                     promise.handlers.append{
                         switch promise.state {
                         case .Rejected(let error):
                             reject(error)
                         case .Fulfilled(let bodyValue):
-                            resolve(bodyValue())
+                            let val = bodyValue()
+                            if val is Void {
+                                resolve(nil)
+                            } else {
+                                resolve(val)
+                            }
                         case .Pending:
                             abort()
                         }
@@ -313,14 +323,24 @@ public class Promise<T> {
                         case .Rejected(let error):
                             reject(error)
                         case .Fulfilled(let bodyValue):
-                            resolve(bodyValue())
+                            let val = bodyValue()
+                            if val is Void {
+                                resolve(nil)
+                            } else {
+                                resolve(val)
+                            }
                         case .Pending:
                             promise.handlers.append{
                                 switch promise.state {
                                 case .Rejected(let error):
                                     reject(error)
                                 case .Fulfilled(let bodyValue):
-                                    resolve(bodyValue())
+                                    let val = bodyValue()
+                                    if val is Void {
+                                        resolve(nil)
+                                    } else {
+                                        resolve(val)
+                                    }
                                 case .Pending:
                                     abort()
                                 }
