@@ -126,6 +126,8 @@ class PromiseTests: XCTestCase {
         }.then { (value) -> Void in
             NSLog("isMainThread 13: \(NSThread.isMainThread())")
             
+            NSLog("Value 13: \(value)")
+            
             if value == nil {
                 e3.fulfill()
             }

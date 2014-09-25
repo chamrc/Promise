@@ -137,12 +137,12 @@ public class Promise<T> {
     
     // MARK: Public Methods
     
-    public func then<U>(body:(T?) -> Void) -> Promise<U> {
-        return self.then(onQueue: PromiseGCD.backgroundQueue(), body: body)
-    }
-    public func thenOnMain<U>(body:(T?) -> Void) -> Promise<U> {
-        return self.then(onQueue: PromiseGCD.mainQueue(), body: body)
-    }
+//    public func then<U>(body:(T?) -> Void) -> Promise<U> {
+//        return self.then(onQueue: PromiseGCD.backgroundQueue(), body: body)
+//    }
+//    public func thenOnMain<U>(body:(T?) -> Void) -> Promise<U> {
+//        return self.then(onQueue: PromiseGCD.mainQueue(), body: body)
+//    }
     
     public func then<U>(body:(T?) -> U) -> Promise<U> {
         return self.then(onQueue: PromiseGCD.backgroundQueue(), body: body)
@@ -158,24 +158,10 @@ public class Promise<T> {
         return self.then(onQueue: PromiseGCD.mainQueue(), body: body)
     }
     
-    public func catch(body:(NSError) -> T) -> Promise<T> {
+    public func catch(body:(NSError) -> Void) -> Promise<T> {
         return self.catch(onQueue: PromiseGCD.backgroundQueue(), body: body)
     }
-    public func catchOnMain(body:(NSError) -> T) -> Promise<T> {
-        return self.catch(onQueue: PromiseGCD.mainQueue(), body: body)
-    }
-    
-    public func catch(body:(NSError) -> Void) -> Void {
-        return self.catch(onQueue: PromiseGCD.backgroundQueue(), body: body)
-    }
-    public func catchOnMain(body:(NSError) -> Void) -> Void {
-        return self.catch(onQueue: PromiseGCD.mainQueue(), body: body)
-    }
-    
-    public func catch(body:(NSError) -> Promise<T>) -> Promise<T> {
-        return self.catch(onQueue: PromiseGCD.backgroundQueue(), body: body)
-    }
-    public func catchOnMain(body:(NSError) -> Promise<T>) -> Promise<T> {
+    public func catchOnMain(body:(NSError) -> Void) -> Promise<T> {
         return self.catch(onQueue: PromiseGCD.mainQueue(), body: body)
     }
     
@@ -186,54 +172,61 @@ public class Promise<T> {
         return self.finally(onQueue: PromiseGCD.mainQueue(), body: body)
     }
     
-    
     // MARK: Private Methods
     
-    private func then<U>(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:(T?) -> Void) -> Promise<U> {
-        return dispatch_promise(to: q)  { (resolve, reject) in
-            switch self.state {
-            case .Rejected(let error):
-                reject(error)
-            case .Fulfilled(let value):
-                if let val = value() {
-                    if val is Void {
-                        body(nil)
-                    } else {
-                        body(val)
-                    }
-                } else {
-                    body(nil)
-                }
-                
-                resolve(nil)
-            case .Pending:
-                objc_sync_enter(self)
-
-                self.handlers.append {
-                    switch self.state {
-                    case .Rejected(let error):
-                        reject(error)
-                    case .Fulfilled(let value):
-                        if let val = value() {
-                            if val is Void {
-                                body(nil)
-                            } else {
-                                body(val)
-                            }
-                        } else {
-                            body(nil)
-                        }
-                        
-                        resolve(nil)
-                    case .Pending:
-                        abort()
-                    }
-                }
-                
-                objc_sync_exit(self)
-            }
+    private func isVoid(value: T) -> Bool {
+        if value is Void {
+            return true
+        } else {
+            return false
         }
     }
+    
+//    private func then<U>(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:(T?) -> Void) -> Promise<U> {
+//        return dispatch_promise(to: q)  { (resolve, reject) in
+//            switch self.state {
+//            case .Rejected(let error):
+//                reject(error)
+//            case .Fulfilled(let value):
+//                if let val = value() {
+//                    if self.isVoid(val) {
+//                        body(nil)
+//                    } else {
+//                        body(val)
+//                    }
+//                } else {
+//                    body(nil)
+//                }
+//                
+//                resolve(nil)
+//            case .Pending:
+//                objc_sync_enter(self)
+//
+//                self.handlers.append {
+//                    switch self.state {
+//                    case .Rejected(let error):
+//                        reject(error)
+//                    case .Fulfilled(let value):
+//                        if let val = value() {
+//                            if self.isVoid(val) {
+//                                body(nil)
+//                            } else {
+//                                body(val)
+//                            }
+//                        } else {
+//                            body(nil)
+//                        }
+//                        
+//                        resolve(nil)
+//                    case .Pending:
+//                        abort()
+//                    }
+//                }
+//                
+//                objc_sync_exit(self)
+//            }
+//        }
+//    }
     
     private func then<U>(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:(T?) -> U) -> Promise<U> {
         return dispatch_promise(to: q)  { (resolve, reject) in
@@ -242,11 +235,15 @@ public class Promise<T> {
                 reject(error)
             case .Fulfilled(let value):
                 let result = body(value())
-
+                
                 if let error = result as? NSError {
                     reject(error)
                 } else {
-                    resolve(result)
+                    if result is Void {
+                        resolve(nil)
+                    } else {
+                        resolve(result)
+                    }
                 }
             case .Pending:
                 objc_sync_enter(self)
@@ -261,7 +258,11 @@ public class Promise<T> {
                         if let error = result as? NSError {
                             reject(error)
                         } else {
-                            resolve(result)
+                            if result is Void {
+                                resolve(nil)
+                            } else {
+                                resolve(result)
+                            }
                         }
                     case .Pending:
                         abort()
@@ -335,83 +336,111 @@ public class Promise<T> {
         }
     }
     
-    private func catch(onQueue:dispatch_queue_t = dispatch_get_main_queue(), body:(NSError) -> T) -> Promise<T> {
-        switch state {
-        case .Rejected(let error):
-            return dispatch_promise(to:onQueue){ (resolve, reject) -> Void in
-                resolve(body(error))
-            }
-        case .Fulfilled(let value):
-            return Promise(value: value())
-        case .Pending:
-            return Promise{ (resolve, reject) in
-                self.handlers.append {
-                    switch self.state {
-                    case .Fulfilled(let value):
-                        resolve(value())
-                    case .Rejected(let error):
-                        dispatch_async(onQueue){
-                            resolve(body(error))
-                        }
-                    case .Pending:
-                        abort()
-                    }
-                }
-            }
-        }
-    }
-    
-    private func catch(onQueue:dispatch_queue_t = dispatch_get_main_queue(), body:(NSError) -> Void) -> Void {
-        switch state {
-        case .Rejected(let error):
-            dispatch_async(onQueue, {
+    private func catch(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:(NSError) -> Void) -> Promise<T> {
+        return dispatch_promise(to: q) { (resolve, reject) -> Void in
+            switch self.state {
+            case .Rejected(let error):
                 body(error)
-            })
-        case .Fulfilled:
-            let noop = 0
-        case .Pending:
-            self.handlers.append({
-                switch self.state {
-                case .Rejected(let error):
-                    dispatch_async(onQueue){
+                reject(error)
+            case .Fulfilled(let value):
+                resolve(value())
+            case .Pending:
+                objc_sync_enter(self)
+                
+                self.handlers.append({
+                    switch self.state {
+                    case .Rejected(let error):
                         body(error)
+                        reject(error)
+                    case .Fulfilled(let value):
+                        resolve(value())
+                    case .Pending:
+                        abort()
                     }
-                case .Fulfilled:
-                    let noop = 0
-                case .Pending:
-                    abort()
-                }
-            })
+                })
+                
+                objc_sync_exit(self)
+            }
         }
     }
     
-    private func catch(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:(NSError) -> Promise<T>) -> Promise<T>
-    {
-        switch state {
-        case .Rejected(let error):
-            return dispatch_promise(to:q){
-                bind2(body, error, $0, $1)
-            }
-        case .Fulfilled(let value):
-            return Promise(value:value())
-            
-        case .Pending:
-            return Promise{ (resolve, reject) in
-                self.handlers.append{
-                    switch self.state {
-                    case .Pending:
-                        abort()
-                    case .Fulfilled(let value):
-                        resolve(value())
-                    case .Rejected(let error):
-                        dispatch_async(q){
-                            bind2(body, error, resolve, reject)
-                        }
-                    }
-                }
-            }
-        }
-    }
+//    private func catch(onQueue:dispatch_queue_t = dispatch_get_main_queue(), body:(NSError) -> T) -> Promise<T> {
+//        switch state {
+//        case .Rejected(let error):
+//            return dispatch_promise(to:onQueue){ (resolve, reject) -> Void in
+//                resolve(body(error))
+//            }
+//        case .Fulfilled(let value):
+//            return Promise(value: value())
+//        case .Pending:
+//            return Promise{ (resolve, reject) in
+//                self.handlers.append {
+//                    switch self.state {
+//                    case .Fulfilled(let value):
+//                        resolve(value())
+//                    case .Rejected(let error):
+//                        dispatch_async(onQueue){
+//                            resolve(body(error))
+//                        }
+//                    case .Pending:
+//                        abort()
+//                    }
+//                }
+//            }
+//        }
+//    }
+//    
+//    private func catch(onQueue:dispatch_queue_t = dispatch_get_main_queue(), body:(NSError) -> Void) -> Void {
+//        switch state {
+//        case .Rejected(let error):
+//            dispatch_async(onQueue, {
+//                body(error)
+//            })
+//        case .Fulfilled:
+//            let noop = 0
+//        case .Pending:
+//            self.handlers.append({
+//                switch self.state {
+//                case .Rejected(let error):
+//                    dispatch_async(onQueue){
+//                        body(error)
+//                    }
+//                case .Fulfilled:
+//                    let noop = 0
+//                case .Pending:
+//                    abort()
+//                }
+//            })
+//        }
+//    }
+//    
+//    private func catch(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:(NSError) -> Promise<T>) -> Promise<T>
+//    {
+//        switch state {
+//        case .Rejected(let error):
+//            return dispatch_promise(to:q){
+//                bind2(body, error, $0, $1)
+//            }
+//        case .Fulfilled(let value):
+//            return Promise(value:value())
+//            
+//        case .Pending:
+//            return Promise{ (resolve, reject) in
+//                self.handlers.append{
+//                    switch self.state {
+//                    case .Pending:
+//                        abort()
+//                    case .Fulfilled(let value):
+//                        resolve(value())
+//                    case .Rejected(let error):
+//                        dispatch_async(q){
+//                            bind2(body, error, resolve, reject)
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
     
     private func finally(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:() -> Void) -> Promise<T> {
         return dispatch_promise(to:q) { (resolve, reject) in
