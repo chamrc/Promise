@@ -190,54 +190,49 @@ public class Promise<T> {
     // MARK: Private Methods
     
     private func then<U>(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:(T?) -> Void) -> Promise<U> {
-        switch self.state {
+        return dispatch_promise(to: q)  { (resolve, reject) in
+    
+            switch self.state {
             case .Rejected(let error):
-                return dispatch_promise(to:q) { (resolve, reject) in
-                    reject(error)
-                }
+                reject(error)
             case .Fulfilled(let value):
-                return dispatch_promise(to:q) { (resolve, reject) in
-                    if let val = value() {
-                        if val is Void {
-                            body(nil)
-                        } else {
-                            body(val)
-                        }
-                    } else {
+                if let val = value() {
+                    if val is Void {
                         body(nil)
+                    } else {
+                        body(val)
                     }
-                    
-                    resolve(nil)
+                } else {
+                    body(nil)
                 }
+                
+                resolve(nil)
             case .Pending:
-                return Promise<U> { (resolve, reject) in
-                    objc_sync_enter(self)
-                    
-                    self.handlers.append {
-                        switch self.state {
-                        case .Rejected(let error):
-                            reject(error)
-                        case .Fulfilled(let value):
-                            dispatch_async(q) {
-                                if let val = value() {
-                                    if val is Void {
-                                        body(nil)
-                                    } else {
-                                        body(val)
-                                    }
-                                } else {
-                                    body(nil)
-                                }
-                                
-                                resolve(nil)
+                objc_sync_enter(self)
+
+                self.handlers.append {
+                    switch self.state {
+                    case .Rejected(let error):
+                        reject(error)
+                    case .Fulfilled(let value):
+                        if let val = value() {
+                            if val is Void {
+                                body(nil)
+                            } else {
+                                body(val)
                             }
-                        case .Pending:
-                            abort()
+                        } else {
+                            body(nil)
                         }
+                        
+                        resolve(nil)
+                    case .Pending:
+                        abort()
                     }
-                    
-                    objc_sync_exit(self)
                 }
+                
+                objc_sync_exit(self)
+            }
         }
     }
     
