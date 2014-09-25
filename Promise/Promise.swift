@@ -18,27 +18,6 @@ private class PromiseGCD {
     }
 }
 
-private func bind2<T>(body:(NSError) -> Promise<T>, error: NSError, fulfiller: (T?)->(), rejecter: (NSError)->()) {
-    let promise = body(error)
-    switch promise.state {
-    case .Rejected(let error):
-        rejecter(error)
-    case .Fulfilled(let value):
-        fulfiller(value())
-    case .Pending:
-        promise.handlers.append{
-            switch promise.state {
-            case .Rejected(let error):
-                rejecter(error)
-            case .Fulfilled(let value):
-                fulfiller(value())
-            case .Pending:
-                abort()
-            }
-        }
-    }
-}
-
 func dispatch_promise<T>(to queue:dispatch_queue_t = dispatch_get_global_queue(0, 0), block:(fulfiller: (T?)->Void, rejecter: (NSError)->Void) -> ()) -> Promise<T> {
     return Promise<T> { (fulfiller, rejecter) in
         dispatch_async(queue) {
@@ -203,24 +182,26 @@ public class Promise<T> {
                 objc_sync_enter(self)
 
                 self.handlers.append {
-                    switch self.state {
-                    case .Rejected(let error):
-                        reject(error)
-                    case .Fulfilled(let value):
-                        if let val = value() {
-                            if self.isVoid(val) {
-                                body(nil)
+                    dispatch_async(q, { () -> Void in
+                        switch self.state {
+                        case .Rejected(let error):
+                            reject(error)
+                        case .Fulfilled(let value):
+                            if let val = value() {
+                                if self.isVoid(val) {
+                                    body(nil)
+                                } else {
+                                    body(val)
+                                }
                             } else {
-                                body(val)
+                                body(nil)
                             }
-                        } else {
-                            body(nil)
+                            
+                            resolve(nil)
+                        case .Pending:
+                            abort()
                         }
-                        
-                        resolve(nil)
-                    case .Pending:
-                        abort()
-                    }
+                    })
                 }
                 
                 objc_sync_exit(self)
@@ -249,24 +230,26 @@ public class Promise<T> {
                 objc_sync_enter(self)
 
                 self.handlers.append {
-                    switch self.state {
-                    case .Rejected(let error):
-                        reject(error)
-                    case .Fulfilled(let value):
-                        let result = body(value())
-
-                        if let error = result as? NSError {
+                    dispatch_async(q, { () -> Void in
+                        switch self.state {
+                        case .Rejected(let error):
                             reject(error)
-                        } else {
-                            if result is Void {
-                                resolve(nil)
+                        case .Fulfilled(let value):
+                            let result = body(value())
+                            
+                            if let error = result as? NSError {
+                                reject(error)
                             } else {
-                                resolve(result)
+                                if result is Void {
+                                    resolve(nil)
+                                } else {
+                                    resolve(result)
+                                }
                             }
+                        case .Pending:
+                            abort()
                         }
-                    case .Pending:
-                        abort()
-                    }
+                    })
                 }
                 
                 objc_sync_exit(self)
@@ -293,62 +276,68 @@ public class Promise<T> {
                         resolve(val)
                     }
                 case .Pending:
-                    promise.handlers.append{
-                        switch promise.state {
-                        case .Rejected(let error):
-                            reject(error)
-                        case .Fulfilled(let bodyValue):
-                            let val = bodyValue()
-                            if val is Void {
-                                resolve(nil)
-                            } else {
-                                resolve(val)
+                    promise.handlers.append {
+                        dispatch_async(q, { () -> Void in
+                            switch promise.state {
+                            case .Rejected(let error):
+                                reject(error)
+                            case .Fulfilled(let bodyValue):
+                                let val = bodyValue()
+                                if val is Void {
+                                    resolve(nil)
+                                } else {
+                                    resolve(val)
+                                }
+                            case .Pending:
+                                abort()
                             }
-                        case .Pending:
-                            abort()
-                        }
+                        })
                     }
                 }
             case .Pending:
                 objc_sync_enter(self)
                 
                 self.handlers.append {
-                    switch self.state {
-                    case .Pending:
-                        abort()
-                    case .Fulfilled(let value):
-                        let promise = body(value())
-                        
-                        switch promise.state {
+                    dispatch_async(q, { () -> Void in
+                        switch self.state {
+                        case .Pending:
+                            abort()
                         case .Rejected(let error):
                             reject(error)
-                        case .Fulfilled(let bodyValue):
-                            let val = bodyValue()
-                            if val is Void {
-                                resolve(nil)
-                            } else {
-                                resolve(val)
-                            }
-                        case .Pending:
-                            promise.handlers.append{
-                                switch promise.state {
-                                case .Rejected(let error):
-                                    reject(error)
-                                case .Fulfilled(let bodyValue):
-                                    let val = bodyValue()
-                                    if val is Void {
-                                        resolve(nil)
-                                    } else {
-                                        resolve(val)
-                                    }
-                                case .Pending:
-                                    abort()
+                        case .Fulfilled(let value):
+                            let promise = body(value())
+                            
+                            switch promise.state {
+                            case .Rejected(let error):
+                                reject(error)
+                            case .Fulfilled(let bodyValue):
+                                let val = bodyValue()
+                                if val is Void {
+                                    resolve(nil)
+                                } else {
+                                    resolve(val)
+                                }
+                            case .Pending:
+                                promise.handlers.append {
+                                    dispatch_async(q, { () -> Void in
+                                        switch promise.state {
+                                        case .Rejected(let error):
+                                            reject(error)
+                                        case .Fulfilled(let bodyValue):
+                                            let val = bodyValue()
+                                            if val is Void {
+                                                resolve(nil)
+                                            } else {
+                                                resolve(val)
+                                            }
+                                        case .Pending:
+                                            abort()
+                                        }
+                                    })
                                 }
                             }
                         }
-                    case .Rejected(let error):
-                        reject(error)
-                    }
+                    })
                 }
                 
                 objc_sync_exit(self)
@@ -367,100 +356,24 @@ public class Promise<T> {
             case .Pending:
                 objc_sync_enter(self)
                 
-                self.handlers.append({
-                    switch self.state {
-                    case .Rejected(let error):
-                        body(error)
-                        reject(error)
-                    case .Fulfilled(let value):
-                        resolve(value())
-                    case .Pending:
-                        abort()
-                    }
-                })
+                self.handlers.append {
+                    dispatch_async(q, { () -> Void in
+                        switch self.state {
+                        case .Rejected(let error):
+                            body(error)
+                            reject(error)
+                        case .Fulfilled(let value):
+                            resolve(value())
+                        case .Pending:
+                            abort()
+                        }
+                    })
+                }
                 
                 objc_sync_exit(self)
             }
         }
     }
-    
-//    private func catch(onQueue:dispatch_queue_t = dispatch_get_main_queue(), body:(NSError) -> T) -> Promise<T> {
-//        switch state {
-//        case .Rejected(let error):
-//            return dispatch_promise(to:onQueue){ (resolve, reject) -> Void in
-//                resolve(body(error))
-//            }
-//        case .Fulfilled(let value):
-//            return Promise(value: value())
-//        case .Pending:
-//            return Promise{ (resolve, reject) in
-//                self.handlers.append {
-//                    switch self.state {
-//                    case .Fulfilled(let value):
-//                        resolve(value())
-//                    case .Rejected(let error):
-//                        dispatch_async(onQueue){
-//                            resolve(body(error))
-//                        }
-//                    case .Pending:
-//                        abort()
-//                    }
-//                }
-//            }
-//        }
-//    }
-//    
-//    private func catch(onQueue:dispatch_queue_t = dispatch_get_main_queue(), body:(NSError) -> Void) -> Void {
-//        switch state {
-//        case .Rejected(let error):
-//            dispatch_async(onQueue, {
-//                body(error)
-//            })
-//        case .Fulfilled:
-//            let noop = 0
-//        case .Pending:
-//            self.handlers.append({
-//                switch self.state {
-//                case .Rejected(let error):
-//                    dispatch_async(onQueue){
-//                        body(error)
-//                    }
-//                case .Fulfilled:
-//                    let noop = 0
-//                case .Pending:
-//                    abort()
-//                }
-//            })
-//        }
-//    }
-//    
-//    private func catch(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:(NSError) -> Promise<T>) -> Promise<T>
-//    {
-//        switch state {
-//        case .Rejected(let error):
-//            return dispatch_promise(to:q){
-//                bind2(body, error, $0, $1)
-//            }
-//        case .Fulfilled(let value):
-//            return Promise(value:value())
-//            
-//        case .Pending:
-//            return Promise{ (resolve, reject) in
-//                self.handlers.append{
-//                    switch self.state {
-//                    case .Pending:
-//                        abort()
-//                    case .Fulfilled(let value):
-//                        resolve(value())
-//                    case .Rejected(let error):
-//                        dispatch_async(q){
-//                            bind2(body, error, resolve, reject)
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//    }
     
     private func finally(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:() -> Void) -> Promise<T> {
         return dispatch_promise(to:q) { (resolve, reject) in
@@ -472,16 +385,18 @@ public class Promise<T> {
                 body()
                 reject(error)
             case .Pending:
-                self.handlers.append{
-                    body()
-                    switch self.state {
-                    case .Fulfilled(let value):
-                        resolve(value())
-                    case .Rejected(let error):
-                        reject(error)
-                    case .Pending:
-                        abort()
-                    }
+                self.handlers.append {
+                    dispatch_async(q, { () -> Void in
+                        body()
+                        switch self.state {
+                        case .Fulfilled(let value):
+                            resolve(value())
+                        case .Rejected(let error):
+                            reject(error)
+                        case .Pending:
+                            abort()
+                        }
+                    })
                 }
             }
         }

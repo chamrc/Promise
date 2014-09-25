@@ -123,7 +123,7 @@ class PromiseTests: XCTestCase {
             XCTAssertEqual(value!, "Promise")
             e2.fulfill()
             
-        }.then { (value) -> Void in
+        }.thenOnMain { (value) -> Void in
             NSLog("isMainThread 13: \(NSThread.isMainThread())")
             
             NSLog("Value 13: \(value)")
