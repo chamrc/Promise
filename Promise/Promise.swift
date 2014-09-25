@@ -251,7 +251,7 @@ public class Promise<T> {
                     let val = Promise.voidToNil(bodyValue())
                     resolve(val)
                 case .Pending:
-                    objc_sync_enter(self)
+                    objc_sync_enter(promise)
                     
                     promise.handlers.append(
                         queue: q,
@@ -268,7 +268,7 @@ public class Promise<T> {
                         }
                     )
                     
-                    objc_sync_exit(self)
+                    objc_sync_exit(promise)
                 }
             case .Pending:
                 objc_sync_enter(self)
@@ -292,7 +292,7 @@ public class Promise<T> {
                                 let val = Promise.voidToNil(bodyValue())
                                 resolve(val)
                             case .Pending:
-                                objc_sync_enter(self)
+                                objc_sync_enter(promise)
                                 
                                 promise.handlers.append(
                                     queue: q,
@@ -309,7 +309,7 @@ public class Promise<T> {
                                     }
                                 )
                                 
-                                objc_sync_exit(self)
+                                objc_sync_exit(promise)
                             }
                         }
                     }
