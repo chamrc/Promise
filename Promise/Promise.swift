@@ -38,26 +38,26 @@ public class Promise<T> {
         switch state {
         case .Fulfilled, .Pending: return false
         case .Rejected: return true
-        }
+            }
     }
     public var fulfilled:Bool {
         switch state {
         case .Rejected, .Pending: return false
         case .Fulfilled: return true
-        }
+            }
     }
     public var pending:Bool {
         switch state {
         case .Rejected, .Fulfilled: return false
         case .Pending: return true
-        }
+            }
     }
     
     public var value:T? {
         switch state {
         case .Fulfilled(let value): return value()
         default: return nil
-        }
+            }
     }
     
     private func callHandlers() {
@@ -171,7 +171,7 @@ public class Promise<T> {
                 resolve(nil)
             case .Pending:
                 objc_sync_enter(self)
-
+                
                 self.handlers.append(
                     queue: q,
                     handler: {
@@ -208,7 +208,7 @@ public class Promise<T> {
                 }
             case .Pending:
                 objc_sync_enter(self)
-
+                
                 self.handlers.append(
                     queue: q,
                     handler: {
@@ -369,12 +369,13 @@ public class Promise<T> {
                 self.handlers.append(
                     queue: q,
                     handler: {
-                        body()
                         switch self.state {
                         case .Fulfilled(let value):
+                            body()
                             let val = Promise.voidToNil(value())
                             resolve(val)
                         case .Rejected(let error):
+                            body()
                             reject(error)
                         case .Pending:
                             abort()
