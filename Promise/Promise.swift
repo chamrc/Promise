@@ -191,7 +191,6 @@ public class Promise<T> {
     
     private func then<U>(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:(T?) -> Void) -> Promise<U> {
         return dispatch_promise(to: q)  { (resolve, reject) in
-    
             switch self.state {
             case .Rejected(let error):
                 reject(error)
@@ -237,38 +236,32 @@ public class Promise<T> {
     }
     
     private func then<U>(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:(T?) -> U) -> Promise<U> {
-        switch state {
-        case .Rejected(let error):
-            return dispatch_promise(to:q) { (resolve, reject) in
+        return dispatch_promise(to: q)  { (resolve, reject) in
+            switch self.state {
+            case .Rejected(let error):
                 reject(error)
-            }
-        case .Fulfilled(let value):
-            return dispatch_promise(to:q) { (resolve, reject) in
+            case .Fulfilled(let value):
                 let result = body(value())
-                
+
                 if let error = result as? NSError {
                     reject(error)
                 } else {
                     resolve(result)
                 }
-            }
-        case .Pending:
-            return Promise<U> { (resolve, reject) in
+            case .Pending:
                 objc_sync_enter(self)
-                
+
                 self.handlers.append {
                     switch self.state {
                     case .Rejected(let error):
                         reject(error)
                     case .Fulfilled(let value):
-                        dispatch_async(q) {
-                            let result = body(value())
-                            
-                            if let error = result as? NSError {
-                                reject(error)
-                            } else {
-                                resolve(result)
-                            }
+                        let result = body(value())
+
+                        if let error = result as? NSError {
+                            reject(error)
+                        } else {
+                            resolve(result)
                         }
                     case .Pending:
                         abort()
@@ -278,6 +271,7 @@ public class Promise<T> {
                 objc_sync_exit(self)
             }
         }
+        
     }
     
     private func then<U>(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:(T?) -> Promise<U>) -> Promise<U> {
