@@ -38,28 +38,26 @@ public class Promise<T> {
         switch state {
         case .Fulfilled, .Pending: return false
         case .Rejected: return true
-            }
+        }
     }
     public var fulfilled:Bool {
         switch state {
         case .Rejected, .Pending: return false
         case .Fulfilled: return true
-            }
+        }
     }
     public var pending:Bool {
         switch state {
         case .Rejected, .Fulfilled: return false
         case .Pending: return true
-            }
+        }
     }
     
     public var value:T? {
         switch state {
-        case .Fulfilled(let value):
-            return value()
-        default:
-            return nil
-            }
+        case .Fulfilled(let value): return value()
+        default: return nil
+        }
     }
     
     private func callHandlers() {
@@ -90,27 +88,6 @@ public class Promise<T> {
     
     public init(error:NSError) {
         self.state = .Rejected(error)
-    }
-    
-    
-    // MARK: Resolve and Reject
-    
-    private func onReject(err: NSError) {
-        objc_sync_enter(self)
-        if pending {
-            state = .Rejected(err)
-            callHandlers()
-        }
-        objc_sync_exit(self)
-    }
-    
-    private func onResolve(obj: T?) {
-        objc_sync_enter(self)
-        if pending {
-            state = .Fulfilled(obj)
-            callHandlers()
-        }
-        objc_sync_exit(self)
     }
     
     // MARK: Public Methods
@@ -150,13 +127,37 @@ public class Promise<T> {
         return self.finally(onQueue: PromiseGCD.mainQueue(), body: body)
     }
     
+    // MARK: Private (Resolve and Reject)
+    
+    private func onReject(err: NSError) {
+        objc_sync_enter(self)
+        if pending {
+            state = .Rejected(err)
+            callHandlers()
+        }
+        objc_sync_exit(self)
+    }
+    
+    private func onResolve(obj: T?) {
+        objc_sync_enter(self)
+        if pending {
+            state = .Fulfilled(obj)
+            callHandlers()
+        }
+        objc_sync_exit(self)
+    }
+    
     // MARK: Private Methods
     
-    private func isVoid(value: T) -> Bool {
-        if value is Void {
-            return true
+    private class func voidToNil<T>(value: T!) -> T? {
+        if let val = value {
+            if val is Void {
+                return nil
+            } else {
+                return val
+            }
         } else {
-            return false
+            return nil
         }
     }
     
@@ -166,16 +167,7 @@ public class Promise<T> {
             case .Rejected(let error):
                 reject(error)
             case .Fulfilled(let value):
-                if let val = value() {
-                    if self.isVoid(val) {
-                        body(nil)
-                    } else {
-                        body(val)
-                    }
-                } else {
-                    body(nil)
-                }
-                
+                let val = Promise.voidToNil(value())
                 resolve(nil)
             case .Pending:
                 objc_sync_enter(self)
@@ -187,16 +179,7 @@ public class Promise<T> {
                         case .Rejected(let error):
                             reject(error)
                         case .Fulfilled(let value):
-                            if let val = value() {
-                                if self.isVoid(val) {
-                                    body(nil)
-                                } else {
-                                    body(val)
-                                }
-                            } else {
-                                body(nil)
-                            }
-                            
+                            let val = Promise.voidToNil(value())
                             resolve(nil)
                         case .Pending:
                             abort()
@@ -215,16 +198,13 @@ public class Promise<T> {
             case .Rejected(let error):
                 reject(error)
             case .Fulfilled(let value):
-                let result = body(value())
+                let val = Promise.voidToNil(value())
+                let result = Promise.voidToNil(body(val))
                 
                 if let error = result as? NSError {
                     reject(error)
                 } else {
-                    if result is Void {
-                        resolve(nil)
-                    } else {
-                        resolve(result)
-                    }
+                    resolve(result)
                 }
             case .Pending:
                 objc_sync_enter(self)
@@ -236,16 +216,13 @@ public class Promise<T> {
                         case .Rejected(let error):
                             reject(error)
                         case .Fulfilled(let value):
-                            let result = body(value())
+                            let val = Promise.voidToNil(value())
+                            let result = Promise.voidToNil(body(val))
                             
                             if let error = result as? NSError {
                                 reject(error)
                             } else {
-                                if result is Void {
-                                    resolve(nil)
-                                } else {
-                                    resolve(result)
-                                }
+                                resolve(result)
                             }
                         case .Pending:
                             abort()
@@ -264,18 +241,15 @@ public class Promise<T> {
             case .Rejected(let error):
                 reject(error)
             case .Fulfilled(let value):
-                let promise = body(value())
+                let val = Promise.voidToNil(value())
+                let promise = body(val)
                 
                 switch promise.state {
                 case .Rejected(let error):
                     reject(error)
                 case .Fulfilled(let bodyValue):
-                    let val = bodyValue()
-                    if val is Void {
-                        resolve(nil)
-                    } else {
-                        resolve(val)
-                    }
+                    let val = Promise.voidToNil(bodyValue())
+                    resolve(val)
                 case .Pending:
                     promise.handlers.append(
                         queue: q,
@@ -284,12 +258,8 @@ public class Promise<T> {
                             case .Rejected(let error):
                                 reject(error)
                             case .Fulfilled(let bodyValue):
-                                let val = bodyValue()
-                                if val is Void {
-                                    resolve(nil)
-                                } else {
-                                    resolve(val)
-                                }
+                                let val = Promise.voidToNil(bodyValue())
+                                resolve(val)
                             case .Pending:
                                 abort()
                             }
@@ -308,18 +278,15 @@ public class Promise<T> {
                         case .Rejected(let error):
                             reject(error)
                         case .Fulfilled(let value):
-                            let promise = body(value())
+                            let val = Promise.voidToNil(value())
+                            let promise = body(val)
                             
                             switch promise.state {
                             case .Rejected(let error):
                                 reject(error)
                             case .Fulfilled(let bodyValue):
-                                let val = bodyValue()
-                                if val is Void {
-                                    resolve(nil)
-                                } else {
-                                    resolve(val)
-                                }
+                                let val = Promise.voidToNil(bodyValue())
+                                resolve(val)
                             case .Pending:
                                 promise.handlers.append(
                                     queue: q,
@@ -328,12 +295,8 @@ public class Promise<T> {
                                         case .Rejected(let error):
                                             reject(error)
                                         case .Fulfilled(let bodyValue):
-                                            let val = bodyValue()
-                                            if val is Void {
-                                                resolve(nil)
-                                            } else {
-                                                resolve(val)
-                                            }
+                                            let val = Promise.voidToNil(bodyValue())
+                                            resolve(val)
                                         case .Pending:
                                             abort()
                                         }
@@ -356,7 +319,8 @@ public class Promise<T> {
                 body(error)
                 reject(error)
             case .Fulfilled(let value):
-                resolve(value())
+                let val = Promise.voidToNil(value())
+                resolve(val)
             case .Pending:
                 objc_sync_enter(self)
                 
@@ -368,7 +332,8 @@ public class Promise<T> {
                             body(error)
                             reject(error)
                         case .Fulfilled(let value):
-                            resolve(value())
+                            let val = Promise.voidToNil(value())
+                            resolve(val)
                         case .Pending:
                             abort()
                         }
@@ -382,10 +347,11 @@ public class Promise<T> {
     
     private func finally(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:() -> Void) -> Promise<T> {
         return dispatch_promise(to:q) { (resolve, reject) in
+            body()
             switch self.state {
             case .Fulfilled(let value):
-                body()
-                resolve(value())
+                let val = Promise.voidToNil(value())
+                resolve(val)
             case .Rejected(let error):
                 body()
                 reject(error)
@@ -396,7 +362,8 @@ public class Promise<T> {
                         body()
                         switch self.state {
                         case .Fulfilled(let value):
-                            resolve(value())
+                            let val = Promise.voidToNil(value())
+                            resolve(val)
                         case .Rejected(let error):
                             reject(error)
                         case .Pending:

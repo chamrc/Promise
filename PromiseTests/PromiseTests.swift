@@ -185,7 +185,11 @@ class PromiseTests: XCTestCase {
             
             let (promise, resolve, reject) = Promise<String>.defer()
             
+            objc_sync_enter(self)
+            
             resolve("Hello")
+            
+            objc_sync_exit(self)
             
             return promise
         }
@@ -197,5 +201,9 @@ class PromiseTests: XCTestCase {
         }
         
         waitForExpectationsWithTimeout(10, handler: nil)
+    }
+    
+    func testAll() {
+        
     }
 }
