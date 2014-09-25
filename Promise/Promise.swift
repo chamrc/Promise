@@ -1,5 +1,4 @@
 import Foundation
-import UIKit
 
 enum PromiseState<T> {
     case Pending
