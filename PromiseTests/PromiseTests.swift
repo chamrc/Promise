@@ -178,18 +178,16 @@ class PromiseTests: XCTestCase {
             }
             return 24
         }
-        .then { (value) -> String in
+        .then { (value) -> Promise<String> in
             NSLog("value 2: \(value)")
             XCTAssertEqual(value!, 24)
             e2.fulfill()
             
-//            let (promise, resolve, reject) = Promise<String>.defer()
-//            
-//            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), { () -> Void in
-//                resolve("Hello")
-//            })
+            let (promise, resolve, reject) = Promise<String>.defer()
             
-            return "Hello"
+            resolve("Hello")
+            
+            return promise
         }
         .thenOnMain { (value) -> Void in
             NSLog("value 3: \(value)")
