@@ -32,7 +32,7 @@ func dispatch_main(block: ()->()) {
 
 
 public class Promise<T> {
-    var handlers:[()->()] = []
+    var handlers:[(queue: dispatch_queue_t, handler: () -> ())] = []
     var state:PromiseState<T> = .Pending
     
     public var rejected:Bool {
@@ -64,8 +64,8 @@ public class Promise<T> {
     }
     
     private func callHandlers() {
-        for handler in handlers {
-            handler()
+        for callback in handlers {
+            dispatch_async(callback.queue, callback.handler)
         }
         handlers.removeAll(keepCapacity: false)
     }
@@ -181,8 +181,9 @@ public class Promise<T> {
             case .Pending:
                 objc_sync_enter(self)
 
-                self.handlers.append {
-                    dispatch_async(q, { () -> Void in
+                self.handlers.append(
+                    queue: q,
+                    handler: {
                         switch self.state {
                         case .Rejected(let error):
                             reject(error)
@@ -201,8 +202,8 @@ public class Promise<T> {
                         case .Pending:
                             abort()
                         }
-                    })
-                }
+                    }
+                )
                 
                 objc_sync_exit(self)
             }
@@ -229,8 +230,9 @@ public class Promise<T> {
             case .Pending:
                 objc_sync_enter(self)
 
-                self.handlers.append {
-                    dispatch_async(q, { () -> Void in
+                self.handlers.append(
+                    queue: q,
+                    handler: {
                         switch self.state {
                         case .Rejected(let error):
                             reject(error)
@@ -249,8 +251,8 @@ public class Promise<T> {
                         case .Pending:
                             abort()
                         }
-                    })
-                }
+                    }
+                )
                 
                 objc_sync_exit(self)
             }
@@ -276,8 +278,9 @@ public class Promise<T> {
                         resolve(val)
                     }
                 case .Pending:
-                    promise.handlers.append {
-                        dispatch_async(q, { () -> Void in
+                    promise.handlers.append(
+                        queue: q,
+                        handler: {
                             switch promise.state {
                             case .Rejected(let error):
                                 reject(error)
@@ -291,14 +294,15 @@ public class Promise<T> {
                             case .Pending:
                                 abort()
                             }
-                        })
-                    }
+                        }
+                    )
                 }
             case .Pending:
                 objc_sync_enter(self)
                 
-                self.handlers.append {
-                    dispatch_async(q, { () -> Void in
+                self.handlers.append(
+                    queue: q,
+                    handler: {
                         switch self.state {
                         case .Pending:
                             abort()
@@ -318,8 +322,9 @@ public class Promise<T> {
                                     resolve(val)
                                 }
                             case .Pending:
-                                promise.handlers.append {
-                                    dispatch_async(q, { () -> Void in
+                                promise.handlers.append(
+                                    queue: q,
+                                    handler: {
                                         switch promise.state {
                                         case .Rejected(let error):
                                             reject(error)
@@ -333,12 +338,12 @@ public class Promise<T> {
                                         case .Pending:
                                             abort()
                                         }
-                                    })
-                                }
+                                    }
+                                )
                             }
                         }
-                    })
-                }
+                    }
+                )
                 
                 objc_sync_exit(self)
             }
@@ -356,8 +361,9 @@ public class Promise<T> {
             case .Pending:
                 objc_sync_enter(self)
                 
-                self.handlers.append {
-                    dispatch_async(q, { () -> Void in
+                self.handlers.append(
+                    queue: q,
+                    handler: {
                         switch self.state {
                         case .Rejected(let error):
                             body(error)
@@ -367,8 +373,8 @@ public class Promise<T> {
                         case .Pending:
                             abort()
                         }
-                    })
-                }
+                    }
+                )
                 
                 objc_sync_exit(self)
             }
@@ -385,8 +391,9 @@ public class Promise<T> {
                 body()
                 reject(error)
             case .Pending:
-                self.handlers.append {
-                    dispatch_async(q, { () -> Void in
+                self.handlers.append(
+                    queue: q,
+                    handler: {
                         body()
                         switch self.state {
                         case .Fulfilled(let value):
@@ -396,8 +403,8 @@ public class Promise<T> {
                         case .Pending:
                             abort()
                         }
-                    })
-                }
+                    }
+                )
             }
         }
     }
