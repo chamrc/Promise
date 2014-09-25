@@ -271,18 +271,14 @@ public class Promise<T> {
                 objc_sync_exit(self)
             }
         }
-        
     }
     
     private func then<U>(onQueue q:dispatch_queue_t = dispatch_get_main_queue(), body:(T?) -> Promise<U>) -> Promise<U> {
-        
-        switch state {
-        case .Rejected(let error):
-            return dispatch_promise(to:q) { (resolve, reject) in
+        return dispatch_promise(to: q)  { (resolve, reject) in
+            switch self.state {
+            case .Rejected(let error):
                 reject(error)
-            }
-        case .Fulfilled(let value):
-            return dispatch_promise(to:q) { (resolve, reject) in
+            case .Fulfilled(let value):
                 let promise = body(value())
                 
                 switch promise.state {
@@ -302,32 +298,30 @@ public class Promise<T> {
                         }
                     }
                 }
-            }
-        case .Pending:
-            return Promise<U> { (resolve, reject) in
-                self.handlers.append{
+            case .Pending:
+                objc_sync_enter(self)
+                
+                self.handlers.append {
                     switch self.state {
                     case .Pending:
                         abort()
                     case .Fulfilled(let value):
-                        dispatch_async(q) {
-                            let promise = body(value())
-                            
-                            switch promise.state {
-                            case .Rejected(let error):
-                                reject(error)
-                            case .Fulfilled(let bodyValue):
-                                resolve(bodyValue())
-                            case .Pending:
-                                promise.handlers.append{
-                                    switch promise.state {
-                                    case .Rejected(let error):
-                                        reject(error)
-                                    case .Fulfilled(let bodyValue):
-                                        resolve(bodyValue())
-                                    case .Pending:
-                                        abort()
-                                    }
+                        let promise = body(value())
+                        
+                        switch promise.state {
+                        case .Rejected(let error):
+                            reject(error)
+                        case .Fulfilled(let bodyValue):
+                            resolve(bodyValue())
+                        case .Pending:
+                            promise.handlers.append{
+                                switch promise.state {
+                                case .Rejected(let error):
+                                    reject(error)
+                                case .Fulfilled(let bodyValue):
+                                    resolve(bodyValue())
+                                case .Pending:
+                                    abort()
                                 }
                             }
                         }
@@ -335,6 +329,8 @@ public class Promise<T> {
                         reject(error)
                     }
                 }
+                
+                objc_sync_exit(self)
             }
         }
     }
