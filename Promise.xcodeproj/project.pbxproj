@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		51BB6C671A03970A00821DBF /* Promise.all.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51BB6C661A03970A00821DBF /* Promise.all.swift */; };
+		51BB6C681A03970E00821DBF /* Promise.all.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51BB6C661A03970A00821DBF /* Promise.all.swift */; };
 		51DC2ABA19C74AFD00F847B9 /* Promise.h in Headers */ = {isa = PBXBuildFile; fileRef = 51DC2AB919C74AFD00F847B9 /* Promise.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		51DC2AC419C74AFD00F847B9 /* PromiseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51DC2AC319C74AFD00F847B9 /* PromiseTests.swift */; };
 		51DC2ACE19C74B1800F847B9 /* Promise.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51DC2ACD19C74B1800F847B9 /* Promise.swift */; };
@@ -14,6 +16,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		51BB6C661A03970A00821DBF /* Promise.all.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Promise.all.swift; sourceTree = "<group>"; };
 		51DC2AB419C74AFD00F847B9 /* Promise.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Promise.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		51DC2AB819C74AFD00F847B9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		51DC2AB919C74AFD00F847B9 /* Promise.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Promise.h; sourceTree = "<group>"; };
@@ -62,6 +65,7 @@
 		51DC2AB619C74AFD00F847B9 /* Promise */ = {
 			isa = PBXGroup;
 			children = (
+				51BB6C661A03970A00821DBF /* Promise.all.swift */,
 				51DC2AB919C74AFD00F847B9 /* Promise.h */,
 				51DC2AB719C74AFD00F847B9 /* Supporting Files */,
 				51DC2ACD19C74B1800F847B9 /* Promise.swift */,
@@ -200,6 +204,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				51BB6C671A03970A00821DBF /* Promise.all.swift in Sources */,
 				51DC2ACE19C74B1800F847B9 /* Promise.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -209,6 +214,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				51DC2AC419C74AFD00F847B9 /* PromiseTests.swift in Sources */,
+				51BB6C681A03970E00821DBF /* Promise.all.swift in Sources */,
 				51DC2ACF19C74B1800F847B9 /* Promise.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -383,6 +389,7 @@
 				51DC2AC919C74AFD00F847B9 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		51DC2ACA19C74AFD00F847B9 /* Build configuration list for PBXNativeTarget "PromiseTests" */ = {
 			isa = XCConfigurationList;
@@ -391,6 +398,7 @@
 				51DC2ACC19C74AFD00F847B9 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

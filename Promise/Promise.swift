@@ -77,111 +77,30 @@ public class Promise<T>: Hashable {
         }
     }
     
-    class func any<K>(promises: Promise<K>...) -> Promise<[PromiseResult<K>]> {
-        return self.any(promises)
-    }
-    
-    class func any<K>(promises: [Promise<K>]) -> Promise<[PromiseResult<K>]> {
-        if promises.isEmpty {
-            return Promise<[PromiseResult<K>]>(value:[])
-        }
-        
-        let (promise, resolve, reject) = Promise<[PromiseResult<K>]>.defer()
-        
-        var results = [PromiseResult<K>](count: promises.count, repeatedValue: PromiseResult<K>())
-        var promiseIndexes: [Promise : Int] = [Promise : Int]()
-        
-        var x = 0
-        for (index, promise) in enumerate(promises) {
-            results[index] = PromiseResult<K>()
-            
-            promise.then { (value) -> Void in
-                if let data = value {
-                    results[index].object = data
-                    results[index].error = nil
-                }
-                
-                if ++x == promises.count {
-                    resolve(results)
-                }
-            }
-            promise.catch { (error) -> Void in
-                results[index].object = nil
-                results[index].error = error
-                
-                if ++x == promises.count {
-                    for result in results {
-                        if result.object != nil {
-                            resolve(results)
-                            return
-                        }
-                    }
-                    
-                    reject(error)
-                }
-            }
-        }
-        
-        return promise
-    }
-    
-    class func all<K>(promises: Promise<K>...) -> Promise<[PromiseResult<K>]> {
-        return self.all(promises)
-    }
-    
-    class func all<K>(promises: [Promise<K>]) -> Promise<[PromiseResult<K>]> {
-        if promises.isEmpty {
-            return Promise<[PromiseResult<K>]>(value:[])
-        }
-        
-        let (promise, resolve, reject) = Promise<[PromiseResult<K>]>.defer()
-        
-        var results = [PromiseResult<K>](count: promises.count, repeatedValue: PromiseResult<K>())
-        var promiseIndexes: [Promise : Int] = [Promise : Int]()
-        
-        var x = 0
-        for (index, promise) in enumerate(promises) {
-            results[index] = PromiseResult<K>()
-            
-            promise.then { (value) -> Void in
-                if let data = value {
-                    results[index].object = data
-                }
-                
-                if ++x == promises.count {
-                    resolve(results)
-                }
-            }
-            promise.catch(reject)
-        }
-        
-        return promise
-    }
-    
     public var rejected:Bool {
         switch state {
         case .Fulfilled, .Pending: return false
         case .Rejected: return true
-            }
+        }
     }
     public var fulfilled:Bool {
         switch state {
         case .Rejected, .Pending: return false
         case .Fulfilled: return true
-            }
+        }
     }
     public var pending:Bool {
         switch state {
         case .Rejected, .Fulfilled: return false
         case .Pending: return true
-            }
+        }
     }
     
     public var value:T? {
         switch state {
         case .Fulfilled(let value): return value()
         default: return nil
-            }
+        }
     }
     
     private func callHandlers() {

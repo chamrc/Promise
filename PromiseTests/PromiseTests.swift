@@ -221,7 +221,7 @@ class PromiseTests: XCTestCase {
             return testData[3]
         }
         
-        Promise<Int>.all(p1, p2, p3, p4).then { (value) -> Void in
+        all(p1, p2, p3, p4).then { (value) -> Void in
             if let results = value {
                 for i in 0..<results.count {
                     let result = results[i]
@@ -234,7 +234,7 @@ class PromiseTests: XCTestCase {
         }
         
         let promises: [Promise<Int>] = [p1, p2, p3, p4]
-        Promise<Int>.all(promises).then { (value) -> Void in
+        all(promises).then { (value) -> Void in
             
             if let results = value {
                 for i in 0..<results.count {
@@ -271,7 +271,7 @@ class PromiseTests: XCTestCase {
         let (p4, resolve, reject) = Promise<Int>.defer()
         reject(NSError(domain: "Error", code: 123, userInfo: [:]))
         
-        Promise<Int>.all(p1, p2, p3, p4).then { (value) -> Void in
+        all(p1, p2, p3, p4).then { (value) -> Void in
             if let results = value {
                 for i in 0..<results.count {
                     let result = results[i]
@@ -284,7 +284,7 @@ class PromiseTests: XCTestCase {
         }
         
         let promises: [Promise<Int>] = [p1, p2, p3, p4]
-        Promise<Int>.all(promises).then { (value) -> Void in
+        all(promises).then { (value) -> Void in
             if let results = value {
                 for i in 0..<results.count {
                     let result = results[i]
@@ -321,7 +321,7 @@ class PromiseTests: XCTestCase {
             return testData[3]
         }
         
-        Promise<Int>.any(p1, p2, p3, p4).then { (value) -> Void in
+        any(p1, p2, p3, p4).then { (value) -> Void in
             if let results = value {
                 for i in 0..<results.count {
                     let result = results[i]
@@ -333,7 +333,7 @@ class PromiseTests: XCTestCase {
         }
         
         let promises: [Promise<Int>] = [p1, p2, p3, p4]
-        Promise<Int>.any(promises).then { (value) -> Void in
+        any(promises).then { (value) -> Void in
             if let results = value {
                 for i in 0..<results.count {
                     let result = results[i]
@@ -369,7 +369,7 @@ class PromiseTests: XCTestCase {
         let (p4, resolve, reject) = Promise<Int>.defer()
         reject(testError)
         
-        Promise<Int>.any(p1, p2, p3, p4).then { (value) -> Void in
+        any(p1, p2, p3, p4).then { (value) -> Void in
             if let results = value {
                 for i in 0..<results.count {
                     if let obj = results[i].object {
@@ -384,7 +384,7 @@ class PromiseTests: XCTestCase {
         }
         
         let promises: [Promise<Int>] = [p1, p2, p3, p4]
-        Promise<Int>.any(promises).then { (value) -> Void in
+        any(promises).then { (value) -> Void in
             if let results = value {
                 for i in 0..<results.count {
                     if let obj = results[i].object {
