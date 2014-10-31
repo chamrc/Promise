@@ -30,9 +30,125 @@ func dispatch_main(block: ()->()) {
 }
 
 
-public class Promise<T> {
+public class PromiseResult<M>: Printable {
+    var object: M?
+    var error: NSError?
+    
+    public var description: String {
+        var objectDesc = "nil"
+        var errorDesc = "nil"
+        if let obj = self.object {
+            objectDesc = "\(obj)"
+        }
+        return "{\n" +
+            "    " + objectDesc.stringByReplacingOccurrencesOfString("\n", withString: "\n    ", options: .allZeros, range: nil) + ",\n" +
+            "    " + errorDesc.stringByReplacingOccurrencesOfString("\n", withString: "\n    ", options: .allZeros, range: nil) + "\n" +
+        "}"
+    }
+    
+    init() {
+        self.object = nil
+        self.error = nil
+    }
+    
+    init(object: M) {
+        self.object = object
+        self.error = nil
+    }
+    
+    init(error: NSError) {
+        self.object = nil
+        self.error = error
+    }
+}
+
+public func ==<K>(lhs: Promise<K>, rhs: Promise<K>) -> Bool {
+    return lhs.hashValue == rhs.hashValue
+}
+
+public class Promise<T>: Hashable {
+    var uuid: NSUUID = NSUUID()
     var handlers:[(queue: dispatch_queue_t, handler: () -> ())] = []
     var state:PromiseState<T> = .Pending
+    
+    public var hashValue: Int {
+        get {
+            return self.uuid.UUIDString.hashValue
+        }
+    }
+    
+    class func any<K>(promises: Promise<K>...) -> Promise<[PromiseResult<K>]> {
+        if promises.isEmpty {
+            return Promise<[PromiseResult<K>]>(value:[])
+        }
+        
+        let (promise, resolve, reject) = Promise<[PromiseResult<K>]>.defer()
+        
+        var results = [PromiseResult<K>](count: promises.count, repeatedValue: PromiseResult<K>())
+        var promiseIndexes: [Promise : Int] = [Promise : Int]()
+        
+        var x = 0
+        for (index, promise) in enumerate(promises) {
+            results[index] = PromiseResult<K>()
+            
+            promise.then { (value) -> Void in
+                if let data = value {
+                    results[index].object = data
+                    results[index].error = nil
+                }
+                
+                if ++x == promises.count {
+                    resolve(results)
+                }
+            }
+            promise.catch { (error) -> Void in
+                results[index].object = nil
+                results[index].error = error
+                
+                if ++x == promises.count {
+                    for result in results {
+                        if result.object != nil {
+                            resolve(results)
+                            return
+                        }
+                    }
+                    
+                    reject(error)
+                }
+            }
+        }
+        
+        return promise
+    }
+    
+    class func all<K>(promises: Promise<K>...) -> Promise<[PromiseResult<K>]> {
+        if promises.isEmpty {
+            return Promise<[PromiseResult<K>]>(value:[])
+        }
+        
+        let (promise, resolve, reject) = Promise<[PromiseResult<K>]>.defer()
+        
+        var results = [PromiseResult<K>](count: promises.count, repeatedValue: PromiseResult<K>())
+        var promiseIndexes: [Promise : Int] = [Promise : Int]()
+        
+        var x = 0
+        for (index, promise) in enumerate(promises) {
+            results[index] = PromiseResult<K>()
+            
+            promise.then { (value) -> Void in
+                if let data = value {
+                    results[index].object = data
+                }
+                
+                if ++x == promises.count {
+                    resolve(results)
+                }
+            }
+            promise.catch(reject)
+        }
+        
+        return promise
+    }
     
     public var rejected:Bool {
         switch state {

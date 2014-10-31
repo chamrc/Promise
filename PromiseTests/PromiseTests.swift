@@ -200,6 +200,146 @@ class PromiseTests: XCTestCase {
     }
     
     func testAll() {
+        let e1 = expectation()
         
+        let testData = [24, 16, 7, 2]
+        
+        let p1 = Promise<Int>().then { (value) -> Int in
+            return testData[0]
+        }
+        
+        let p2 = Promise<Int>().then { (value) -> Int in
+            return testData[1]
+        }
+        
+        let p3 = Promise<Int>().then { (value) -> Int in
+            return testData[2]
+        }
+        
+        let p4 = Promise<Int>().then { (value) -> Int in
+            return testData[3]
+        }
+        
+        Promise<Int>.all(p1, p2, p3, p4).then { (value) -> Void in
+            if let results = value {
+                for i in 0..<results.count {
+                    let result = results[i]
+                    println("RESULT \(i): \(result)")
+                    XCTAssertEqual(result.object!, testData[i])
+                }
+                
+                e1.fulfill()
+            }
+        }
+        
+        waitForExpectationsWithTimeout(10, handler: nil)
+    }
+    
+    func testAllError() {
+        let e1 = expectation()
+        
+        let testData = [24, 16, 7, 2]
+        
+        let p1 = Promise<Int>().then { (value) -> Int in
+            return testData[0]
+        }
+        
+        let p2 = Promise<Int>().then { (value) -> Int in
+            return testData[1]
+        }
+        
+        let p3 = Promise<Int>().then { (value) -> Int in
+            return testData[2]
+        }
+
+        let (p4, resolve, reject) = Promise<Int>.defer()
+        reject(NSError(domain: "Error", code: 123, userInfo: [:]))
+        
+        Promise<Int>.all(p1, p2, p3, p4).then { (value) -> Void in
+            if let results = value {
+                for i in 0..<results.count {
+                    let result = results[i]
+                    println("RESULT \(i): \(result)")
+                    XCTAssertEqual(result.object!, testData[i])
+                }
+            }
+        }.catch { (error) -> Void in
+            e1.fulfill()
+        }
+        
+        waitForExpectationsWithTimeout(10, handler: nil)
+    }
+    
+    func testAny() {
+        let e1 = expectation()
+        
+        let testData = [24, 16, 7, 2]
+        
+        let p1 = Promise<Int>().then { (value) -> Int in
+            return testData[0]
+        }
+        
+        let p2 = Promise<Int>().then { (value) -> Int in
+            return testData[1]
+        }
+        
+        let p3 = Promise<Int>().then { (value) -> Int in
+            return testData[2]
+        }
+        
+        let p4 = Promise<Int>().then { (value) -> Int in
+            return testData[3]
+        }
+        
+        Promise<Int>.any(p1, p2, p3, p4).then { (value) -> Void in
+            if let results = value {
+                for i in 0..<results.count {
+                    let result = results[i]
+                    XCTAssertEqual(result.object!, testData[i])
+                }
+                
+                e1.fulfill()
+            }
+        }
+        
+        waitForExpectationsWithTimeout(10, handler: nil)
+    }
+    
+    func testAnyError() {
+        let e1 = expectation()
+        
+        let testError = NSError(domain: "Error", code: 123, userInfo: [:])
+        let testData = [24, 16, 7, 2]
+        
+        let p1 = Promise<Int>().then { (value) -> Int in
+            return testData[0]
+        }
+        
+        let p2 = Promise<Int>().then { (value) -> Int in
+            return testData[1]
+        }
+        
+        let p3 = Promise<Int>().then { (value) -> Int in
+            return testData[2]
+        }
+        
+        let (p4, resolve, reject) = Promise<Int>.defer()
+        reject(testError)
+        
+        Promise<Int>.any(p1, p2, p3, p4).then { (value) -> Void in
+            if let results = value {
+                for i in 0..<results.count {
+                    if let obj = results[i].object {
+                        XCTAssertEqual(obj, testData[i])
+                    } else if let err = results[i].error {
+                        XCTAssertEqual(err, testError)
+                    }
+                }
+                e1.fulfill()
+            }
+        }.catch { (error) -> Void in
+        }
+        
+        waitForExpectationsWithTimeout(10, handler: nil)
     }
 }
