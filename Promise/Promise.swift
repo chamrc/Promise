@@ -78,6 +78,10 @@ public class Promise<T>: Hashable {
     }
     
     class func any<K>(promises: Promise<K>...) -> Promise<[PromiseResult<K>]> {
+        return self.any(promises)
+    }
+    
+    class func any<K>(promises: [Promise<K>]) -> Promise<[PromiseResult<K>]> {
         if promises.isEmpty {
             return Promise<[PromiseResult<K>]>(value:[])
         }
@@ -122,6 +126,10 @@ public class Promise<T>: Hashable {
     }
     
     class func all<K>(promises: Promise<K>...) -> Promise<[PromiseResult<K>]> {
+        return self.all(promises)
+    }
+    
+    class func all<K>(promises: [Promise<K>]) -> Promise<[PromiseResult<K>]> {
         if promises.isEmpty {
             return Promise<[PromiseResult<K>]>(value:[])
         }
